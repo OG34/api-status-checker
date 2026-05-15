@@ -1,0 +1,1170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>API Status Checker</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #080d17;
+      --surface: #0f1824;
+      --card: #111d2e;
+      --card-hover: #162236;
+      --border: #1e2d42;
+      --border-light: #243347;
+      --text: #dde6f0;
+      --muted: #5a7090;
+      --muted2: #3d566e;
+      --green: #10b981;
+      --green-dim: #064e3b;
+      --yellow: #f59e0b;
+      --yellow-dim: #78350f;
+      --red: #ef4444;
+      --red-dim: #7f1d1d;
+      --blue: #60a5fa;
+      --blue-dim: #1e3a5f;
+      --gray: #4b5563;
+      --gray-dim: #1f2937;
+      --accent: #6366f1;
+      --accent2: #818cf8;
+      --radius: 10px;
+      --shadow: 0 4px 24px rgba(0,0,0,.5);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    /* ── Header ── */
+    .header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(8,13,23,.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #4f46e5, #06b6d4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    .brand h1 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      letter-spacing: -.01em;
+      background: linear-gradient(135deg, var(--accent2), var(--blue));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .brand p {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 1px;
+    }
+
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .countdown {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      color: var(--muted);
+      font-size: 12px;
+      padding: 6px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    .countdown-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--green);
+      animation: pulse-dot 2s infinite;
+      flex-shrink: 0;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: .4; transform: scale(.85); }
+    }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 14px;
+      border-radius: 7px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all .15s ease;
+      white-space: nowrap;
+    }
+
+    .btn:disabled {
+      opacity: .5;
+      cursor: not-allowed;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: #4f46e5;
+      transform: translateY(-1px);
+    }
+
+    .btn-secondary {
+      background: var(--surface);
+      color: var(--text);
+      border-color: var(--border);
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      background: var(--card);
+      border-color: var(--border-light);
+      transform: translateY(-1px);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--muted);
+      padding: 5px 8px;
+    }
+
+    .btn-ghost:hover {
+      color: var(--text);
+      background: var(--card);
+    }
+
+    .btn-full { width: 100%; justify-content: center; }
+
+    /* ── Main layout ── */
+    .main {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 24px 20px 60px;
+    }
+
+    /* ── Summary bar ── */
+    .summary-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 22px;
+      flex-wrap: wrap;
+    }
+
+    .summary-chip {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      border: 1px solid;
+    }
+
+    .summary-chip.green  { background: var(--green-dim);  border-color: var(--green);  color: var(--green); }
+    .summary-chip.yellow { background: var(--yellow-dim); border-color: var(--yellow); color: var(--yellow); }
+    .summary-chip.red    { background: var(--red-dim);    border-color: var(--red);    color: var(--red); }
+    .summary-chip.gray   { background: var(--gray-dim);   border-color: var(--gray);   color: var(--gray); }
+
+    .summary-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    /* ── Services grid ── */
+    .services-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 16px;
+    }
+
+    .empty-state {
+      grid-column: 1/-1;
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--muted);
+    }
+
+    .empty-state .empty-icon {
+      font-size: 48px;
+      margin-bottom: 12px;
+      opacity: .5;
+    }
+
+    .empty-state h3 {
+      font-size: 1.1rem;
+      margin-bottom: 6px;
+      color: var(--text);
+    }
+
+    /* ── Service card ── */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      transition: border-color .2s ease, transform .2s ease, box-shadow .2s ease;
+      position: relative;
+    }
+
+    .card:hover {
+      border-color: var(--border-light);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow);
+    }
+
+    .card-stripe {
+      height: 3px;
+      width: 100%;
+    }
+
+    .card-stripe.operational { background: var(--green); }
+    .card-stripe.degraded    { background: var(--yellow); }
+    .card-stripe.reachable   { background: var(--yellow); }
+    .card-stripe.timeout     { background: var(--yellow); }
+    .card-stripe.outage      { background: var(--red); }
+    .card-stripe.checking    { background: linear-gradient(90deg, var(--blue) 0%, var(--accent2) 50%, var(--blue) 100%); background-size: 200%; animation: shimmer 1.5s infinite; }
+    .card-stripe.idle,
+    .card-stripe.unknown     { background: var(--gray); }
+
+    @keyframes shimmer {
+      0%   { background-position: 200% center; }
+      100% { background-position: -200% center; }
+    }
+
+    .card-body {
+      padding: 16px;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .card-title-group {
+      min-width: 0;
+    }
+
+    .card-name {
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: -.01em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .card-url {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+    }
+
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 9px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      white-space: nowrap;
+      flex-shrink: 0;
+      border: 1px solid;
+    }
+
+    .status-badge .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    .status-badge.operational { background: var(--green-dim);  border-color: var(--green);  color: var(--green); }
+    .status-badge.degraded    { background: var(--yellow-dim); border-color: var(--yellow); color: var(--yellow); }
+    .status-badge.reachable   { background: var(--yellow-dim); border-color: var(--yellow); color: var(--yellow); }
+    .status-badge.timeout     { background: var(--yellow-dim); border-color: var(--yellow); color: var(--yellow); }
+    .status-badge.outage      { background: var(--red-dim);    border-color: var(--red);    color: var(--red); }
+    .status-badge.checking    { background: var(--blue-dim);   border-color: var(--blue);   color: var(--blue); }
+    .status-badge.checking .dot { animation: pulse-dot 1s infinite; }
+    .status-badge.idle,
+    .status-badge.unknown     { background: var(--gray-dim);   border-color: var(--gray);   color: var(--gray); }
+
+    .card-metrics {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+
+    .metric {
+      flex: 1;
+      min-width: 80px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 8px 10px;
+    }
+
+    .metric-label {
+      font-size: 10px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      margin-bottom: 3px;
+    }
+
+    .metric-value {
+      font-size: 15px;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .metric-value.fast   { color: var(--green); }
+    .metric-value.medium { color: var(--yellow); }
+    .metric-value.slow   { color: var(--red); }
+    .metric-value.na     { color: var(--muted); }
+
+    .metric-sub {
+      font-size: 10px;
+      color: var(--muted);
+      margin-top: 1px;
+    }
+
+    .card-description {
+      font-size: 11px;
+      color: var(--muted);
+      margin-bottom: 12px;
+      padding: 6px 8px;
+      background: var(--surface);
+      border-radius: 5px;
+      border-left: 2px solid var(--border-light);
+    }
+
+    .card-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .card-last-checked {
+      font-size: 11px;
+      color: var(--muted2);
+    }
+
+    .card-actions {
+      display: flex;
+      gap: 6px;
+    }
+
+    /* ── Modal ── */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.7);
+      backdrop-filter: blur(4px);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .2s ease;
+    }
+
+    .modal-overlay.open {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .modal {
+      background: var(--card);
+      border: 1px solid var(--border-light);
+      border-radius: 14px;
+      width: 100%;
+      max-width: 480px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 25px 60px rgba(0,0,0,.6);
+      transform: scale(.96) translateY(8px);
+      transition: transform .2s ease;
+    }
+
+    .modal-overlay.open .modal {
+      transform: scale(1) translateY(0);
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 20px 0;
+      margin-bottom: 16px;
+    }
+
+    .modal-header h2 {
+      font-size: 1.05rem;
+      font-weight: 700;
+    }
+
+    .modal-close {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--muted);
+      font-size: 18px;
+      line-height: 1;
+      width: 30px;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: color .15s, background .15s;
+    }
+
+    .modal-close:hover {
+      color: var(--text);
+      background: var(--border);
+    }
+
+    .modal-body {
+      padding: 0 20px 20px;
+    }
+
+    .preset-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      color: var(--muted);
+      margin-bottom: 10px;
+      font-weight: 600;
+    }
+
+    .preset-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+
+    .preset-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      padding: 12px 8px;
+      border-radius: 8px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 500;
+      transition: all .15s ease;
+      text-align: center;
+    }
+
+    .preset-btn:hover {
+      background: var(--card-hover);
+      border-color: var(--accent);
+      transform: translateY(-1px);
+    }
+
+    .preset-btn .preset-icon {
+      font-size: 22px;
+    }
+
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 11px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      margin-bottom: 18px;
+    }
+
+    .divider::before, .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ── Forms ── */
+    .form-group {
+      margin-bottom: 14px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      margin-bottom: 6px;
+    }
+
+    .form-group input,
+    .form-group select {
+      width: 100%;
+      padding: 9px 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      color: var(--text);
+      font-size: 13px;
+      transition: border-color .15s;
+      outline: none;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(99,102,241,.15);
+    }
+
+    .form-group input::placeholder {
+      color: var(--muted2);
+    }
+
+    .form-group select option {
+      background: var(--card);
+    }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 200;
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      border: 1px solid;
+      box-shadow: 0 8px 24px rgba(0,0,0,.4);
+      transform: translateY(0);
+      transition: opacity .3s ease, transform .3s ease;
+      max-width: 320px;
+    }
+
+    .toast.success { background: var(--green-dim);  border-color: var(--green);  color: var(--green); }
+    .toast.error   { background: var(--red-dim);    border-color: var(--red);    color: var(--red); }
+    .toast.hidden  { opacity: 0; transform: translateY(8px); pointer-events: none; }
+
+    /* ── Responsive ── */
+    @media (max-width: 600px) {
+      .header { padding: 12px 16px; }
+      .main   { padding: 16px 12px 40px; }
+      .countdown span:last-child { display: none; }
+    }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--border-light); }
+  </style>
+</head>
+<body>
+
+<div id="root">
+  <header class="header">
+    <div class="brand">
+      <div class="brand-icon">📡</div>
+      <div>
+        <h1>API Status Checker</h1>
+        <p>Real-time service monitor</p>
+      </div>
+    </div>
+    <div class="controls">
+      <div class="countdown" id="countdown">
+        <span class="countdown-dot"></span>
+        <span id="countdown-text">Refresh in 60s</span>
+      </div>
+      <button class="btn btn-secondary" id="btn-check-all">↻ Check All</button>
+      <button class="btn btn-primary" id="btn-add">+ Add Service</button>
+    </div>
+  </header>
+
+  <main class="main">
+    <div id="summary-bar" class="summary-bar"></div>
+    <div id="services-grid" class="services-grid"></div>
+  </main>
+</div>
+
+<!-- Modal -->
+<div id="modal-overlay" class="modal-overlay" role="dialog" aria-modal="true" aria-label="Add Service">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Add Service</h2>
+      <button class="modal-close" id="btn-modal-close" aria-label="Close">✕</button>
+    </div>
+    <div class="modal-body">
+      <p class="preset-label">Quick presets</p>
+      <div class="preset-grid" id="preset-grid"></div>
+      <div class="divider">custom endpoint</div>
+      <form id="add-form">
+        <div class="form-group">
+          <label for="inp-name">Service name</label>
+          <input type="text" id="inp-name" placeholder="My API" maxlength="60" required>
+        </div>
+        <div class="form-group">
+          <label for="inp-url">URL to check</label>
+          <input type="url" id="inp-url" placeholder="https://api.example.com/health" required>
+        </div>
+        <div class="form-group">
+          <label for="inp-type">Check method</label>
+          <select id="inp-type">
+            <option value="custom">HTTP fetch (custom endpoint)</option>
+            <option value="statuspage">Statuspage.io JSON API</option>
+          </select>
+        </div>
+        <button type="submit" class="btn btn-primary btn-full" style="margin-top:4px">Add Service</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast hidden" id="toast"></div>
+
+<script>
+'use strict';
+
+// ── Presets ─────────────────────────────────────────────────────────────
+const PRESETS = [
+  { name: 'OpenAI',      url: 'https://status.openai.com/api/v2/status.json',      type: 'statuspage', icon: '🤖' },
+  { name: 'Anthropic',   url: 'https://status.anthropic.com/api/v2/status.json',   type: 'statuspage', icon: '🧠' },
+  { name: 'GitHub',      url: 'https://www.githubstatus.com/api/v2/status.json',   type: 'statuspage', icon: '🐙' },
+  { name: 'Cloudflare',  url: 'https://www.cloudflarestatus.com/api/v2/status.json', type: 'statuspage', icon: '🌐' },
+  { name: 'Stripe',      url: 'https://status.stripe.com/api/v2/status.json',      type: 'statuspage', icon: '💳' },
+  { name: 'Twilio',      url: 'https://status.twilio.com/api/v2/status.json',      type: 'statuspage', icon: '📞' },
+  { name: 'Vercel',      url: 'https://www.vercel-status.com/api/v2/status.json',  type: 'statuspage', icon: '▲' },
+  { name: 'Supabase',    url: 'https://status.supabase.com/api/v2/status.json',    type: 'statuspage', icon: '⚡' },
+];
+
+// ── State ───────────────────────────────────────────────────────────────
+let services = [];
+let countdownSecs = 60;
+let countdownTimer = null;
+
+const STORAGE_KEY = 'api-status-services-v2';
+
+function genId() {
+  return Math.random().toString(36).slice(2, 10);
+}
+
+// ── Persistence ─────────────────────────────────────────────────────────
+function saveServices() {
+  try {
+    const data = services.map(s => ({
+      id: s.id, name: s.name, url: s.url, type: s.type, icon: s.icon,
+    }));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  } catch (_) {}
+}
+
+function loadServices() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch (_) {
+    return null;
+  }
+}
+
+function makeService(name, url, type, icon = '🔗', id = null) {
+  return {
+    id: id || genId(),
+    name,
+    url,
+    type,
+    icon,
+    status: 'idle',
+    responseTime: null,
+    lastChecked: null,
+    statusDescription: '',
+  };
+}
+
+// ── Status helpers ───────────────────────────────────────────────────────
+function indicatorToStatus(indicator) {
+  if (indicator === 'none')     return 'operational';
+  if (indicator === 'minor')    return 'degraded';
+  return 'outage';
+}
+
+const STATUS_LABEL = {
+  operational: 'Operational',
+  degraded:    'Degraded',
+  reachable:   'Reachable',
+  timeout:     'Timeout',
+  outage:      'Outage',
+  checking:    'Checking…',
+  idle:        'Not checked',
+  unknown:     'Unknown',
+};
+
+function rtClass(ms) {
+  if (ms === null || ms === undefined) return 'na';
+  if (ms < 300)  return 'fast';
+  if (ms < 1000) return 'medium';
+  return 'slow';
+}
+
+function rtLabel(ms) {
+  if (ms === null || ms === undefined) return '—';
+  if (ms >= 1000) return (ms / 1000).toFixed(2) + 's';
+  return ms + 'ms';
+}
+
+function timeAgo(date) {
+  if (!date) return 'Never';
+  const secs = Math.floor((Date.now() - new Date(date).getTime()) / 1000);
+  if (secs < 5)  return 'just now';
+  if (secs < 60) return secs + 's ago';
+  const mins = Math.floor(secs / 60);
+  if (mins < 60) return mins + 'm ago';
+  return Math.floor(mins / 60) + 'h ago';
+}
+
+// ── Check logic ─────────────────────────────────────────────────────────
+async function fetchWithTimeout(url, opts, timeoutMs) {
+  const controller = new AbortController();
+  const tid = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { ...opts, signal: controller.signal });
+    clearTimeout(tid);
+    return res;
+  } catch (e) {
+    clearTimeout(tid);
+    throw e;
+  }
+}
+
+async function checkService(id) {
+  const svc = services.find(s => s.id === id);
+  if (!svc) return;
+
+  updateStatus(id, { status: 'checking', responseTime: null, statusDescription: '' });
+
+  let result;
+  const start = performance.now();
+
+  try {
+    if (svc.type === 'statuspage') {
+      const res = await fetchWithTimeout(svc.url, {}, 10000);
+      const responseTime = Math.round(performance.now() - start);
+
+      if (!res.ok) {
+        result = { status: 'degraded', responseTime, statusDescription: `HTTP ${res.status}` };
+      } else {
+        const json = await res.json();
+        const indicator = json?.status?.indicator || 'none';
+        const description = json?.status?.description || 'All Systems Operational';
+        result = { status: indicatorToStatus(indicator), responseTime, statusDescription: description };
+      }
+    } else {
+      // Custom endpoint: try normal fetch first, fall back to no-cors
+      try {
+        const res = await fetchWithTimeout(svc.url, {}, 10000);
+        const responseTime = Math.round(performance.now() - start);
+        const statusDescription = `HTTP ${res.status} ${res.statusText || ''}`.trim();
+        result = { status: res.ok ? 'operational' : 'degraded', responseTime, statusDescription };
+      } catch (fetchErr) {
+        if (fetchErr.name === 'AbortError') {
+          result = { status: 'timeout', responseTime: null, statusDescription: 'Request timed out (>10s)' };
+        } else {
+          // CORS or network error — try no-cors to distinguish reachable vs down
+          const start2 = performance.now();
+          try {
+            await fetchWithTimeout(svc.url, { mode: 'no-cors' }, 10000);
+            const responseTime = Math.round(performance.now() - start2);
+            result = { status: 'reachable', responseTime, statusDescription: 'Reachable (CORS restricted)' };
+          } catch (noCorsErr) {
+            if (noCorsErr.name === 'AbortError') {
+              result = { status: 'timeout', responseTime: null, statusDescription: 'Request timed out (>10s)' };
+            } else {
+              result = { status: 'outage', responseTime: null, statusDescription: 'Unreachable' };
+            }
+          }
+        }
+      }
+    }
+  } catch (e) {
+    result = { status: 'outage', responseTime: null, statusDescription: e.message || 'Unknown error' };
+  }
+
+  updateStatus(id, { ...result, lastChecked: new Date().toISOString() });
+}
+
+async function checkAll() {
+  if (services.length === 0) {
+    showToast('No services to check. Add one first!', 'error');
+    return;
+  }
+  await Promise.all(services.map(s => checkService(s.id)));
+}
+
+// ── State mutations ──────────────────────────────────────────────────────
+function updateStatus(id, patch) {
+  const idx = services.findIndex(s => s.id === id);
+  if (idx === -1) return;
+  services[idx] = { ...services[idx], ...patch };
+  renderCard(services[idx]);
+  renderSummary();
+}
+
+function addService(name, url, type, icon) {
+  const exists = services.some(s => s.url === url);
+  if (exists) {
+    showToast(`"${name}" is already in the list.`, 'error');
+    return false;
+  }
+  const svc = makeService(name, url, type, icon);
+  services.push(svc);
+  saveServices();
+  renderGrid();
+  checkService(svc.id);
+  return true;
+}
+
+function removeService(id) {
+  services = services.filter(s => s.id !== id);
+  saveServices();
+  renderGrid();
+  renderSummary();
+}
+
+// ── Rendering ────────────────────────────────────────────────────────────
+function renderSummary() {
+  const bar = document.getElementById('summary-bar');
+  if (services.length === 0) { bar.innerHTML = ''; return; }
+
+  const counts = { green: 0, yellow: 0, red: 0, gray: 0 };
+  for (const s of services) {
+    if (s.status === 'operational') counts.green++;
+    else if (['degraded','reachable','timeout'].includes(s.status)) counts.yellow++;
+    else if (s.status === 'outage') counts.red++;
+    else counts.gray++;
+  }
+
+  const parts = [];
+  if (counts.green)  parts.push(`<div class="summary-chip green"><span class="summary-dot"></span>${counts.green} Operational</div>`);
+  if (counts.yellow) parts.push(`<div class="summary-chip yellow"><span class="summary-dot"></span>${counts.yellow} Degraded</div>`);
+  if (counts.red)    parts.push(`<div class="summary-chip red"><span class="summary-dot"></span>${counts.red} Outage</div>`);
+  if (counts.gray)   parts.push(`<div class="summary-chip gray"><span class="summary-dot"></span>${counts.gray} Unknown</div>`);
+
+  bar.innerHTML = parts.join('');
+}
+
+function renderCard(svc) {
+  const existing = document.getElementById(`card-${svc.id}`);
+  const el = buildCard(svc);
+  if (existing) {
+    existing.replaceWith(el);
+  } else {
+    document.getElementById('services-grid').appendChild(el);
+  }
+}
+
+function buildCard(svc) {
+  const el = document.createElement('div');
+  el.className = 'card';
+  el.id = `card-${svc.id}`;
+
+  const statusClass = svc.status || 'idle';
+  const label = STATUS_LABEL[svc.status] || 'Unknown';
+  const rtC = rtClass(svc.responseTime);
+
+  // Shorten URL for display
+  let displayUrl = svc.url;
+  try {
+    const u = new URL(svc.url);
+    displayUrl = u.hostname + (u.pathname !== '/' ? u.pathname : '');
+  } catch (_) {}
+
+  el.innerHTML = `
+    <div class="card-stripe ${statusClass}"></div>
+    <div class="card-body">
+      <div class="card-header">
+        <div class="card-title-group">
+          <div class="card-name" title="${esc(svc.name)}">${esc(svc.icon || '🔗')} ${esc(svc.name)}</div>
+          <div class="card-url" title="${esc(svc.url)}">${esc(displayUrl)}</div>
+        </div>
+        <div class="status-badge ${statusClass}">
+          <span class="dot"></span>${esc(label)}
+        </div>
+      </div>
+      <div class="card-metrics">
+        <div class="metric">
+          <div class="metric-label">Response time</div>
+          <div class="metric-value ${rtC}">${esc(rtLabel(svc.responseTime))}</div>
+          <div class="metric-sub">${rtC === 'fast' ? 'Fast' : rtC === 'medium' ? 'Normal' : rtC === 'slow' ? 'Slow' : '—'}</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Last checked</div>
+          <div class="metric-value na" style="font-size:12px;line-height:1.4">${esc(timeAgo(svc.lastChecked))}</div>
+          <div class="metric-sub">${svc.type === 'statuspage' ? 'Statuspage' : 'HTTP fetch'}</div>
+        </div>
+      </div>
+      ${svc.statusDescription ? `<div class="card-description">${esc(svc.statusDescription)}</div>` : ''}
+      <div class="card-footer">
+        <span class="card-last-checked">${svc.lastChecked ? new Date(svc.lastChecked).toLocaleTimeString() : 'Not yet checked'}</span>
+        <div class="card-actions">
+          <button class="btn btn-secondary" style="padding:5px 10px;font-size:12px" data-action="check" data-id="${esc(svc.id)}" ${svc.status === 'checking' ? 'disabled' : ''}>
+            ${svc.status === 'checking' ? '…' : '↻ Check'}
+          </button>
+          <button class="btn btn-ghost" title="Remove" data-action="remove" data-id="${esc(svc.id)}">✕</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  return el;
+}
+
+function renderGrid() {
+  const grid = document.getElementById('services-grid');
+
+  if (services.length === 0) {
+    grid.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">📡</div>
+        <h3>No services added yet</h3>
+        <p>Click "+ Add Service" to start monitoring your APIs.</p>
+      </div>`;
+    renderSummary();
+    return;
+  }
+
+  // Rebuild the grid (only called on structural changes, not status updates)
+  grid.innerHTML = '';
+  for (const svc of services) {
+    grid.appendChild(buildCard(svc));
+  }
+  renderSummary();
+}
+
+// ── Modal ────────────────────────────────────────────────────────────────
+function openModal() {
+  document.getElementById('modal-overlay').classList.add('open');
+  document.getElementById('inp-name').focus();
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+  document.getElementById('add-form').reset();
+}
+
+function renderPresets() {
+  const grid = document.getElementById('preset-grid');
+  grid.innerHTML = PRESETS.map(p => `
+    <button class="preset-btn" data-preset="${esc(p.name)}">
+      <span class="preset-icon">${p.icon}</span>
+      <span>${esc(p.name)}</span>
+    </button>
+  `).join('');
+}
+
+// ── Countdown ────────────────────────────────────────────────────────────
+function startCountdown() {
+  stopCountdown();
+  countdownSecs = 60;
+  updateCountdownDisplay();
+
+  countdownTimer = setInterval(() => {
+    countdownSecs--;
+    if (countdownSecs <= 0) {
+      countdownSecs = 60;
+      checkAll();
+    }
+    updateCountdownDisplay();
+  }, 1000);
+}
+
+function stopCountdown() {
+  if (countdownTimer) {
+    clearInterval(countdownTimer);
+    countdownTimer = null;
+  }
+}
+
+function updateCountdownDisplay() {
+  const el = document.getElementById('countdown-text');
+  if (el) el.textContent = `Refresh in ${countdownSecs}s`;
+}
+
+// ── Toast ────────────────────────────────────────────────────────────────
+let toastTimer = null;
+function showToast(msg, type = 'success') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `toast ${type}`;
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.className = 'toast hidden'; }, 3000);
+}
+
+// ── Escape HTML ──────────────────────────────────────────────────────────
+function esc(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+// ── Event delegation ─────────────────────────────────────────────────────
+document.addEventListener('click', e => {
+  const action = e.target.closest('[data-action]')?.dataset?.action;
+  const id = e.target.closest('[data-id]')?.dataset?.id;
+
+  if (action === 'check' && id) {
+    checkService(id);
+    startCountdown(); // reset timer on manual check
+  }
+
+  if (action === 'remove' && id) {
+    removeService(id);
+  }
+});
+
+document.getElementById('btn-check-all').addEventListener('click', () => {
+  checkAll();
+  startCountdown();
+});
+
+document.getElementById('btn-add').addEventListener('click', openModal);
+document.getElementById('btn-modal-close').addEventListener('click', closeModal);
+document.getElementById('modal-overlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('modal-overlay')) closeModal();
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeModal();
+});
+
+document.getElementById('preset-grid').addEventListener('click', e => {
+  const btn = e.target.closest('.preset-btn');
+  if (!btn) return;
+  const name = btn.dataset.preset;
+  const preset = PRESETS.find(p => p.name === name);
+  if (!preset) return;
+
+  const ok = addService(preset.name, preset.url, preset.type, preset.icon);
+  if (ok) {
+    closeModal();
+    showToast(`${preset.icon} ${preset.name} added!`);
+  }
+});
+
+document.getElementById('add-form').addEventListener('submit', e => {
+  e.preventDefault();
+  const name = document.getElementById('inp-name').value.trim();
+  const url  = document.getElementById('inp-url').value.trim();
+  const type = document.getElementById('inp-type').value;
+
+  if (!name || !url) return;
+
+  try { new URL(url); } catch (_) {
+    showToast('Please enter a valid URL.', 'error');
+    return;
+  }
+
+  const ok = addService(name, url, type, '🔗');
+  if (ok) {
+    closeModal();
+    showToast(`✓ ${name} added!`);
+  }
+});
+
+// ── Boot ─────────────────────────────────────────────────────────────────
+function init() {
+  renderPresets();
+
+  const saved = loadServices();
+  if (saved && saved.length > 0) {
+    services = saved.map(s => makeService(s.name, s.url, s.type, s.icon || '🔗', s.id));
+    renderGrid();
+    checkAll();
+  } else {
+    // Load popular defaults
+    for (const p of PRESETS.slice(0, 3)) {
+      services.push(makeService(p.name, p.url, p.type, p.icon));
+    }
+    saveServices();
+    renderGrid();
+    checkAll();
+  }
+
+  startCountdown();
+}
+
+init();
+</script>
+</body>
+</html>
